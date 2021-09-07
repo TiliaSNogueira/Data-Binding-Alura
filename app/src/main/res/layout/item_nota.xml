@@ -6,11 +6,15 @@
         <variable
             name="nota"
             type="br.com.alura.ceep.model.Nota" />
+        <variable
+            name="listener"
+            type="br.com.alura.ceep.ui.recyclerview.adapter.ListaNotasAdapter.ViewHolder" />
     </data>
 
     <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto"
         xmlns:tools="http://schemas.android.com/tools"
+        android:onClick="@{listener::clicaNaNota}"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="8dp"

@@ -5,8 +5,11 @@ import androidx.databinding.BindingAdapter
 import br.com.alura.ceep.ui.extensions.carregaImagem
 
 @BindingAdapter("carregaImagem")
-fun carregaImagemporURL(view: ImageView, url: String){
-    view.carregaImagem(url)
+fun carregaImagemporURL(view: ImageView, url: String?){
+    url?.let {
+        view.carregaImagem(url)
+    }
+
 }
 
 //ou
