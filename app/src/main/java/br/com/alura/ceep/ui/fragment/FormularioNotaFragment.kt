@@ -17,6 +17,7 @@ import br.com.alura.ceep.databinding.FormularioNotaBinding
 import br.com.alura.ceep.model.Nota
 import br.com.alura.ceep.repository.Falha
 import br.com.alura.ceep.repository.Sucesso
+import br.com.alura.ceep.ui.databinding.NotaData
 import br.com.alura.ceep.ui.dialog.CarregaImagemDialog
 import br.com.alura.ceep.ui.extensions.carregaImagem
 import br.com.alura.ceep.ui.viewmodel.AppBar
@@ -39,26 +40,11 @@ class FormularioNotaFragment : Fragment() {
     private val controlador by lazy {
         findNavController()
     }
-    private lateinit var notaEncontrada: Nota
-    private var urlAtual: String = ""
-    private val campoTitulo: EditText by lazy {
-        formulario_nota_titulo
-    }
-    private val campoDescricao: EditText by lazy {
-        formulario_nota_descricao
-    }
-    private val campoFavorita: CheckBox by lazy {
-        formulario_nota_favorita
-    }
-    private val campoImagem: ImageView by lazy {
-        formulario_nota_imagem
-    }
-    private val fabAdicionaImagem: FloatingActionButton by lazy {
-        formulario_nota_fab_adiciona_imagem
-    }
 
     private lateinit var viewDataBinding : FormularioNotaBinding
-
+    private val notaData by lazy {
+        NotaData()
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setHasOptionsMenu(true)
@@ -70,14 +56,17 @@ class FormularioNotaFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         viewDataBinding = FormularioNotaBinding.inflate(inflater, container, false)
+        viewDataBinding.solicitaImagem = View.OnClickListener{
+            solicitaImagem()
+        }
+        viewDataBinding.nota = notaData
+        viewDataBinding.lifecycleOwner = this
         return viewDataBinding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         tentaBuscarNota()
-        configuraFab()
-        configuraCampoImagem()
     }
 
     private fun tentaBuscarNota() {
@@ -85,56 +74,19 @@ class FormularioNotaFragment : Fragment() {
         if (temIdValido()) {
             viewModel.buscaPorId(notaId).observe(this, Observer {
                 it?.let { notaEncontrada ->
-                    this.viewDataBinding.nota = notaEncontrada
-                    inicializaNota(notaEncontrada)
+                    notaData.atualiza(notaEncontrada)
                     appViewModel.temComponentes = appBarParaEdicao()
                 }
             })
-        } else {
-            inicializaNota(Nota())
         }
     }
 
     private fun temIdValido() = notaId != 0L
 
-    private fun configuraFab() {
-        fabAdicionaImagem.setOnClickListener {
-            solicitaImagem()
-        }
-    }
-
-    private fun configuraCampoImagem() {
-        configuraVisibilidadeDeComponentes()
-        campoImagem.setOnClickListener {
-            solicitaImagem()
-        }
-    }
-
     private fun solicitaImagem() {
-        CarregaImagemDialog().mostra(requireContext(), urlAtual) { urlNova ->
-            this.urlAtual = urlNova
-            configuraImagem()
+        CarregaImagemDialog().mostra(requireContext(), this.notaData.imagemUrl.value ?: "") { urlNova ->
+            this.notaData.imagemUrl.postValue(urlNova)
         }
-    }
-
-    private fun configuraVisibilidadeDeComponentes() {
-        if (urlAtual.isEmpty()) {
-            campoImagem.visibility = GONE
-            fabAdicionaImagem.show()
-        } else {
-            campoImagem.visibility = VISIBLE
-            fabAdicionaImagem.hide()
-        }
-    }
-
-    private fun inicializaNota(notaEncontrada: Nota) {
-        this.notaEncontrada = notaEncontrada
-        urlAtual = this.notaEncontrada.imagemUrl
-    }
-
-    private fun configuraImagem() {
-        configuraVisibilidadeDeComponentes()
-        campoImagem.carregaImagem(urlAtual)
     }
 
     private fun appBarParaEdicao() = ComponentesVisuais(appBar = AppBar(titulo = "Editando nota"))
@@ -149,21 +101,16 @@ class FormularioNotaFragment : Fragment() {
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
         if (item?.itemId == R.id.formulario_nota_menu_salva) {
             val notaCriada = criaNota()
-            salva(notaCriada)
+            //safe call
+            notaCriada?.let {
+                salva(notaCriada)
+            }
         }
         return super.onOptionsItemSelected(item)
     }
 
-    private fun criaNota(): Nota {
-        val titulo = formulario_nota_titulo.text.toString()
-        val descricao = formulario_nota_descricao.text.toString()
-        val favorita = formulario_nota_favorita.isChecked
-        return notaEncontrada.copy(
-            titulo = titulo,
-            descricao = descricao,
-            favorita = favorita,
-            imagemUrl = urlAtual
-        )
+    private fun criaNota(): Nota? {
+       return notaData.paraNota()
     }
 
     private fun salva(notaNova: Nota) {
